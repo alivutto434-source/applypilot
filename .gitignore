@@ -46,3 +46,6 @@ yarn-error.log*
 /.cache/
 /.config/
 *.log
+
+# local git bundle used for hand-off
+applypilot.bundle
