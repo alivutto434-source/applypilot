@@ -40,3 +40,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# tooling caches that must never be committed
+/.npm/
+/.cache/
+/.config/
+*.log
