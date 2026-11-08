@@ -1,0 +1,90 @@
+// ApplyPilot — Prisma schema (PostgreSQL / Supabase)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AppStatus {
+  DRAFTED
+  SENT
+  SKIPPED_MISMATCH
+  FAILED
+}
+
+enum LogLevel {
+  INFO
+  AI
+  EMAIL
+  SUCCESS
+  WARN
+  ERROR
+}
+
+/// Every job you paste into ApplyPilot becomes a row here.
+/// The full job description + source URL are always persisted.
+model JobApplication {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  jobTitle        String?
+  companyName     String?
+  jobDescription  String
+  sourceUrl       String?
+  recruiterEmail  String?
+
+  matchScore      Int?
+  isMatch         Boolean?
+  matchReasoning  String?
+
+  status          AppStatus @default(DRAFTED)
+  emailSubject    String?
+  emailBody       String?
+  emailSentAt     DateTime?
+  cvAttached      Boolean   @default(false)
+  aiModel         String?
+  errorMessage    String?
+
+  logs            ActivityLog[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Colourful, verbose pipeline log feed shown in the UI.
+model ActivityLog {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  level         LogLevel @default(INFO)
+  stage         String
+  message       String
+  applicationId String?
+  application   JobApplication? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  meta          Json?
+
+  @@index([createdAt])
+  @@index([applicationId])
+}
+
+/// Single-row global configuration (id = "singleton").
+/// Secrets (SMTP password, AI key) stay in .env — never in the DB.
+model Settings {
+  id              String   @id @default("singleton")
+  cvText          String   @default("")
+  cvFileName      String?
+  signature       String   @default("")
+  senderName      String   @default("")
+  defaultSubject  String   @default("Application for {{jobTitle}} at {{companyName}}")
+  autoSend        Boolean  @default(false)
+  bypassMatch     Boolean  @default(false)
+  attachCv        Boolean  @default(true)
+  strictness      String   @default("balanced") // strict | balanced | lenient
+  aiModel         String   @default("openai/gpt-4o-mini")
+  minMatchScore   Int      @default(60)
+  updatedAt       DateTime @updatedAt
+}
