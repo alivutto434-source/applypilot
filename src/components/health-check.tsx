@@ -15,9 +15,7 @@ export function HealthCheck() {
     setLoading(true);
     setDeep(isDeep);
     try {
-      const res = await fetch(`/api/health${isDeep ? "?deep=true" : ""}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(`/api/health${isDeep ? "?deep=true" : ""}`, { cache: "no-store" });
       const data = await res.json();
       setChecks(data.checks ?? []);
     } finally {
@@ -32,20 +30,20 @@ export function HealthCheck() {
   return (
     <Card>
       <SectionHeading
-        icon={<HeartPulse className="size-5" />}
+        icon={<HeartPulse className="size-4" />}
         title="System check"
-        hint="Verify the database, AI key, CV and SMTP login before you rely on autopilot."
+        hint="Database, AI key, CV and SMTP login."
         accent="rose"
         action={
           <Button variant="outline" size="sm" onClick={() => void run(true)} loading={loading}>
-            {deep ? "Re-test" : "Test SMTP login"}
+            {deep ? "Re-test" : "Test SMTP"}
           </Button>
         }
       />
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {checks.length === 0 && loading ? (
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-[11.5px] text-[#8c8c96]">
             <Loader2 className="size-3.5 animate-spin" /> Running checks…
           </div>
         ) : null}
@@ -53,20 +51,22 @@ export function HealthCheck() {
         {checks.map((check) => (
           <div
             key={check.name}
-            className={`flex items-start gap-2.5 rounded-xl border px-3 py-2.5 ${
+            className={`flex items-start gap-2 rounded-[3px] border px-2.5 py-2 ${
               check.ok
-                ? "border-emerald-400/20 bg-emerald-500/[0.07]"
-                : "border-rose-400/25 bg-rose-500/[0.07]"
+                ? "border-[#21483a] bg-[#132e23]"
+                : "border-[#4d2730] bg-[#331a1f]"
             }`}
           >
             {check.ok ? (
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+              <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[#6ee7a8]" />
             ) : (
-              <XCircle className="mt-0.5 size-4 shrink-0 text-rose-400" />
+              <XCircle className="mt-0.5 size-3.5 shrink-0 text-[#ff9aa8]" />
             )}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">{check.name}</p>
-              <p className="break-words text-[11px] leading-relaxed text-slate-400">{check.detail}</p>
+              <p className="text-[12px] font-semibold text-white">{check.name}</p>
+              <p className="break-words text-[10.5px] leading-relaxed text-[#9898a2]">
+                {check.detail}
+              </p>
             </div>
           </div>
         ))}

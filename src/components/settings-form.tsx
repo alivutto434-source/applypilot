@@ -8,27 +8,29 @@ import {
   Bot,
   FileSignature,
   Save,
+  Send,
   ShieldCheck,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Field, SectionHeading, Toggle, inputClass } from "@/components/ui";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { FLAG_META, useMailFlags, type MailFlags } from "@/lib/mail-flags";
 
 const schema = z.object({
   cvText: z.string(),
-  signature: z.string(),
+  signatureHtml: z.string(),
   senderName: z.string(),
   defaultSubject: z.string(),
-  autoSend: z.boolean(),
-  bypassMatch: z.boolean(),
-  attachCv: z.boolean(),
   strictness: z.enum(["strict", "balanced", "lenient"]),
   aiModel: z.string().min(1, "Pick a model"),
   minMatchScore: z.coerce.number().int().min(0).max(100),
 });
 
 type Values = z.infer<typeof schema>;
+
+export type SettingsFormInitial = Values & MailFlags;
 
 const MODELS = [
   "openai/gpt-4o-mini",
@@ -39,18 +41,15 @@ const MODELS = [
   "meta-llama/llama-3.3-70b-instruct",
 ];
 
-const SIGNATURE_PRESETS: Record<string, string> = {
-  Professional: "Best regards,\n{{name}}\n{{email}}",
-  Warm: "Thanks so much for your time,\n{{name}}\n{{email}}",
-  Concise: "— {{name}} · {{email}}",
-};
-
-export function SettingsForm({
-  initial,
-}: {
-  initial: Values & { id: string };
-}) {
+export function SettingsForm({ initial }: { initial: SettingsFormInitial }) {
   const [saving, setSaving] = React.useState(false);
+  const { flags, setFlag, syncing } = useMailFlags({
+    flagDraft: initial.flagDraft,
+    flagAutoSend: initial.flagAutoSend,
+    flagFetchRecruiterEmail: initial.flagFetchRecruiterEmail,
+    flagAutoGenerateEmail: initial.flagAutoGenerateEmail,
+    attachCv: initial.attachCv,
+  });
 
   const {
     register,
@@ -60,14 +59,19 @@ export function SettingsForm({
     formState: { errors },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: initial,
+    defaultValues: {
+      cvText: initial.cvText,
+      signatureHtml: initial.signatureHtml,
+      senderName: initial.senderName,
+      defaultSubject: initial.defaultSubject,
+      strictness: initial.strictness,
+      aiModel: initial.aiModel,
+      minMatchScore: initial.minMatchScore,
+    },
   });
 
-  const autoSend = watch("autoSend");
-  const bypassMatch = watch("bypassMatch");
-  const attachCv = watch("attachCv");
   const cvText = watch("cvText") ?? "";
-  const signature = watch("signature") ?? "";
+  const signatureHtml = watch("signatureHtml") ?? "";
 
   const onSubmit = async (values: Values) => {
     setSaving(true);
@@ -75,11 +79,12 @@ export function SettingsForm({
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, ...flags }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save settings");
       toast.success("Settings saved");
+      window.dispatchEvent(new Event("applypilot:refresh"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save settings");
     } finally {
@@ -87,41 +92,126 @@ export function SettingsForm({
     }
   };
 
-  const applyPreset = (preset: string) => {
-    const template = SIGNATURE_PRESETS[preset];
-    if (!template) return;
-    const filled = template
-      .replace("{{name}}", watch("senderName") || "Your Name")
-      .replace("{{email}}", "you@gmail.com");
-    setValue("signature", filled, { shouldDirty: true });
-    toast.success(`${preset} signature applied`);
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* ---------------------------------------------------------- mail flags */}
       <Card>
         <SectionHeading
-          icon={<Sparkles className="size-5" />}
-          title="Matching & sending rules"
-          hint="Global defaults applied to every new application."
+          icon={<Send className="size-4" />}
+          title="Mail sending"
+          hint="These five switches decide what happens after the AI runs. Saved in localStorage and on the server."
+          accent="emerald"
+          action={
+            <span
+              className={`rounded-[3px] border px-2 py-0.5 text-[10.5px] font-semibold ${
+                syncing
+                  ? "border-[#4d3a1a] bg-[#332612] text-[#f2c15c]"
+                  : "border-[#21483a] bg-[#132e23] text-[#6ee7a8]"
+              }`}
+            >
+              {syncing ? "syncing…" : "in sync"}
+            </span>
+          }
+        />
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {FLAG_META.map((flag) => (
+            <Toggle
+              key={flag.key}
+              checked={flags[flag.key]}
+              onChange={(value) => setFlag(flag.key, value)}
+              label={flag.label}
+              description={flag.description}
+              accent={flag.accent}
+            />
+          ))}
+        </div>
+
+        <p className="mt-3 rounded-[4px] border border-[#2a2a30] bg-[#131316] px-3 py-2 text-[11.5px] leading-relaxed text-[#8c8c96]">
+          <strong className="text-[#dcdce2]">No automatic skipping.</strong> A low match score is
+          only logged — whether an application is saved or sent is decided purely by these flags.
+        </p>
+      </Card>
+
+      {/* ----------------------------------------------------------- signature */}
+      <Card>
+        <SectionHeading
+          icon={<FileSignature className="size-4" />}
+          title="Signature (one, rich text)"
+          hint="Bold, italic, underline, hyperlinks and lists — appended to every email, Gmail style."
           accent="violet"
         />
-        <div className="grid gap-4 md:grid-cols-2">
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Your name" icon={<UserRound className="size-3.5 text-[#b9aaff]" />}>
+            <input {...register("senderName")} placeholder="Saad Huzaifa" className={inputClass} />
+          </Field>
           <Field
-            label="Matching strictness"
-            icon={<ShieldCheck className="size-3.5 text-emerald-300" />}
-            hint="Strict = only near-perfect fits. Lenient = plausible fits pass."
+            label="Default subject template"
+            hint="{{jobTitle}} and {{companyName}} are replaced automatically."
           >
+            <input {...register("defaultSubject")} className={inputClass} />
+          </Field>
+        </div>
+
+        <div className="mt-3">
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.06em] text-[#a8a8b3]">
+            Signature
+          </span>
+          <RichTextEditor
+            value={signatureHtml}
+            onChange={(html) => setValue("signatureHtml", html, { shouldDirty: true })}
+            ariaLabel="Signature editor"
+            minHeight="7rem"
+          />
+          <p className="mt-1.5 text-[11.5px] text-[#77777f]">
+            Select text and use the link button (🔗) to add a hyperlink — exactly like Gmail.
+          </p>
+        </div>
+      </Card>
+
+      {/* ------------------------------------------------------------- CV text */}
+      <Card>
+        <SectionHeading
+          icon={<Sparkles className="size-4" />}
+          title="Master CV (text)"
+          hint="The AI matches jobs against this text — plain text is perfect."
+          accent="sky"
+          action={
+            <span className="rounded-[3px] border border-[#2a2a30] bg-[#131316] px-2 py-0.5 text-[10.5px] font-semibold text-[#a8a8b3]">
+              {cvText.length.toLocaleString()} chars
+            </span>
+          }
+        />
+        <Field label="CV text">
+          <textarea
+            {...register("cvText")}
+            rows={10}
+            placeholder={"SAAD HUZAIFA\nFrontend Engineer · React, Next.js, TypeScript\n\nEXPERIENCE\n..."}
+            className={inputClass + " resize-y font-mono text-[12px] leading-relaxed"}
+          />
+        </Field>
+      </Card>
+
+      {/* --------------------------------------------------------------- model */}
+      <Card>
+        <SectionHeading
+          icon={<Bot className="size-4" />}
+          title="Matching & AI model"
+          hint="Any OpenRouter model id works — cheaper models are weaker at nuanced matching."
+          accent="rose"
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Strictness" icon={<ShieldCheck className="size-3.5 text-[#6ee7a8]" />}>
             <select {...register("strictness")} className={inputClass}>
-              <option value="strict">Strict — near-perfect fit only</option>
-              <option value="balanced">Balanced — recommended</option>
-              <option value="lenient">Lenient — plausible fits pass</option>
+              <option value="strict">Strict</option>
+              <option value="balanced">Balanced</option>
+              <option value="lenient">Lenient</option>
             </select>
           </Field>
-
           <Field
-            label="Minimum match score"
-            hint="Anything below this is treated as a mismatch."
+            label="Min score"
+            hint="Guidance for the model."
             error={errors.minMatchScore?.message}
           >
             <input
@@ -132,130 +222,20 @@ export function SettingsForm({
               className={inputClass}
             />
           </Field>
-
-          <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
-            <Toggle
-              checked={autoSend}
-              onChange={(v) => setValue("autoSend", v, { shouldDirty: true })}
-              label="Send CV automatically"
-              description="When ON, a matching job is emailed instantly. When OFF, drafts wait for your approval."
-              accent="emerald"
-            />
-            <Toggle
-              checked={bypassMatch}
-              onChange={(v) => setValue("bypassMatch", v, { shouldDirty: true })}
-              label="Send regardless of match"
-              description="Bypass the match check and send every application anyway."
-              accent="amber"
-            />
-            <Toggle
-              checked={attachCv}
-              onChange={(v) => setValue("attachCv", v, { shouldDirty: true })}
-              label="Attach the CV PDF"
-              description="Attach your uploaded master CV to every outgoing email."
-              accent="sky"
-            />
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <SectionHeading
-          icon={<UserRound className="size-5" />}
-          title="Your master CV (text)"
-          hint="The AI matches jobs against this text — paste your full CV here."
-          accent="sky"
-          action={
-            <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-300 ring-1 ring-white/10">
-              {cvText.length.toLocaleString()} chars
-            </span>
-          }
-        />
-        <Field label="CV text" hint="Skills, experience, achievements. Plain text is perfect.">
-          <textarea
-            {...register("cvText")}
-            rows={12}
-            placeholder={"SAAD HUZAIFA\nFrontend Engineer · React, Next.js, TypeScript\n\nEXPERIENCE\n..."}
-            className={inputClass + " resize-y font-mono text-[12px] leading-relaxed"}
-          />
-        </Field>
-      </Card>
-
-      <Card>
-        <SectionHeading
-          icon={<FileSignature className="size-5" />}
-          title="Identity & signature"
-          hint="Appended to the bottom of every email."
-          accent="emerald"
-        />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Your name" icon={<UserRound className="size-3.5 text-emerald-300" />}>
-            <input {...register("senderName")} placeholder="Saad Huzaifa" className={inputClass} />
-          </Field>
-          <Field
-            label="Default subject template"
-            hint="Used if the AI does not return a subject. {{jobTitle}} and {{companyName}} are replaced."
-          >
-            <input {...register("defaultSubject")} className={inputClass} />
-          </Field>
-        </div>
-
-        <div className="mt-4">
-          <Field
-            label="Signature"
-            hint={`${signature.length} characters — leave blank for none`}
-          >
-            <textarea {...register("signature")} rows={4} className={inputClass + " resize-y"} />
-          </Field>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              Presets:
-            </span>
-            {Object.keys(SIGNATURE_PRESETS).map((preset) => (
-              <Button
-                key={preset}
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => applyPreset(preset)}
-              >
-                {preset}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <SectionHeading
-          icon={<Bot className="size-5" />}
-          title="AI model"
-          hint="Any OpenRouter model id works — cheaper models are weaker at nuanced matching."
-          accent="rose"
-        />
-        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Model id" error={errors.aiModel?.message}>
             <input {...register("aiModel")} list="model-options" className={inputClass} />
             <datalist id="model-options">
-              {MODELS.map((m) => (
-                <option key={m} value={m} />
+              {MODELS.map((model) => (
+                <option key={model} value={model} />
               ))}
             </datalist>
           </Field>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-400">
-            <p className="font-semibold text-slate-200">Suggested</p>
-            <p>
-              <code className="text-violet-300">openai/gpt-4o-mini</code> is cheap and reliable for
-              JSON output. Switch to <code className="text-violet-300">google/gemini-2.5-flash</code>{" "}
-              for more speed.
-            </p>
-          </div>
         </div>
       </Card>
 
-      <div className="sticky bottom-4 z-10 flex justify-end">
-        <Button type="submit" loading={saving} className="shadow-2xl">
-          <Save className="size-4" /> {saving ? "Saving…" : "Save settings"}
+      <div className="sticky bottom-3 z-10 flex justify-end">
+        <Button type="submit" loading={saving}>
+          <Save className="size-3.5" /> {saving ? "Saving…" : "Save settings"}
         </Button>
       </div>
     </form>

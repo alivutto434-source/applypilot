@@ -37,6 +37,8 @@ model JobApplication {
   jobDescription  String
   sourceUrl       String?
   recruiterEmail  String?
+  /// Where the recruiter address came from: manual | description | fetched
+  recruiterSource String?
 
   matchScore      Int?
   isMatch         Boolean?
@@ -44,7 +46,10 @@ model JobApplication {
 
   status          AppStatus @default(DRAFTED)
   emailSubject    String?
+  /// Plain-text body (also the text/plain part of the email)
   emailBody       String?
+  /// Rich-text body produced by the AI and/or edited in the UI
+  emailBodyHtml   String?
   emailSentAt     DateTime?
   cvAttached      Boolean   @default(false)
   aiModel         String?
@@ -77,12 +82,27 @@ model Settings {
   id              String   @id @default("singleton")
   cvText          String   @default("")
   cvFileName      String?
+
+  /// Plain-text mirror of signatureHtml (text/plain part of the email)
   signature       String   @default("")
+  /// Rich-text (HTML) signature — bold, links, lists. ONE signature only.
+  signatureHtml   String   @default("")
+
   senderName      String   @default("")
   defaultSubject  String   @default("Application for {{jobTitle}} at {{companyName}}")
-  autoSend        Boolean  @default(false)
-  bypassMatch     Boolean  @default(false)
-  attachCv        Boolean  @default(true)
+
+  // ---- Mail sending flags (mirrored to localStorage for instant UI) ----
+  /// Keep generated applications as drafts instead of sending them.
+  flagDraft               Boolean @default(true)
+  /// Send automatically. Only takes effect when flagDraft is OFF.
+  flagAutoSend            Boolean @default(false)
+  /// Try to discover the recruiter address from the source URL / description.
+  flagFetchRecruiterEmail Boolean @default(false)
+  /// Let the AI write subject + body (off = you write it yourself).
+  flagAutoGenerateEmail   Boolean @default(true)
+  /// Attach the master CV PDF to every outgoing email.
+  attachCv                Boolean @default(true)
+
   strictness      String   @default("balanced") // strict | balanced | lenient
   aiModel         String   @default("openai/gpt-4o-mini")
   minMatchScore   Int      @default(60)

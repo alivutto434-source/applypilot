@@ -1,11 +1,17 @@
-import { CheckCircle2, Filter, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, FilePenLine, Send, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
+const TONES = {
+  violet: "border-[#3b3263] bg-[#241f3d] text-[#b9aaff]",
+  emerald: "border-[#21483a] bg-[#132e23] text-[#6ee7a8]",
+  sky: "border-[#26405c] bg-[#152a3d] text-[#8ec5ff]",
+  amber: "border-[#4d3a1a] bg-[#332612] text-[#f2c15c]",
+} as const;
+
 export async function StatCards() {
-  const [total, sent, skipped, drafted, avg] = await Promise.all([
+  const [total, sent, drafted, avg] = await Promise.all([
     prisma.jobApplication.count(),
     prisma.jobApplication.count({ where: { status: "SENT" } }),
-    prisma.jobApplication.count({ where: { status: "SKIPPED_MISMATCH" } }),
     prisma.jobApplication.count({ where: { status: "DRAFTED" } }),
     prisma.jobApplication.aggregate({ _avg: { matchScore: true } }),
   ]);
@@ -13,66 +19,51 @@ export async function StatCards() {
   const cards = [
     {
       label: "Applications",
-      value: total,
-      hint: `${drafted} drafted · awaiting send`,
-      suffix: "",
+      value: String(total),
+      hint: "every job description saved",
       icon: Sparkles,
-      ring: "ring-violet-400/30",
-      bg: "from-violet-500/20 to-fuchsia-500/5",
-      text: "text-violet-200",
+      tone: TONES.violet,
     },
     {
-      label: "Emails sent",
-      value: sent,
-      hint: "CV attached automatically",
-      suffix: "",
+      label: "Sent",
+      value: String(sent),
+      hint: "CV + rich signature attached",
       icon: Send,
-      ring: "ring-emerald-400/30",
-      bg: "from-emerald-500/20 to-teal-500/5",
-      text: "text-emerald-200",
+      tone: TONES.emerald,
     },
     {
-      label: "Skipped mismatches",
-      value: skipped,
-      hint: "filtered out by the AI",
-      suffix: "",
-      icon: Filter,
-      ring: "ring-amber-400/30",
-      bg: "from-amber-500/20 to-orange-500/5",
-      text: "text-amber-200",
+      label: "Drafts waiting",
+      value: String(drafted),
+      hint: "review and press Send",
+      icon: FilePenLine,
+      tone: TONES.sky,
     },
     {
       label: "Average fit",
-      value: avg._avg.matchScore ? Math.round(avg._avg.matchScore) : 0,
-      suffix: "%",
-      hint: "across scored applications",
+      value: `${avg._avg.matchScore ? Math.round(avg._avg.matchScore) : 0}%`,
+      hint: "informational, never blocking",
       icon: CheckCircle2,
-      ring: "ring-sky-400/30",
-      bg: "from-sky-500/20 to-cyan-500/5",
-      text: "text-sky-200",
+      tone: TONES.amber,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <div key={card.label} className="glass animate-rise flex items-center gap-3 p-4">
+          <div key={card.label} className="panel flex items-center gap-2.5 p-3.5">
             <span
-              className={`grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br ring-1 ${card.bg} ${card.ring}`}
+              className={`grid size-9 shrink-0 place-items-center rounded-[4px] border ${card.tone}`}
             >
-              <Icon className={`size-5 ${card.text}`} />
+              <Icon className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-xl font-bold leading-none text-white">
-                {card.value}
-                {card.suffix ?? ""}
-              </p>
-              <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-lg font-bold leading-none text-white">{card.value}</p>
+              <p className="mt-1 truncate text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#a8a8b3]">
                 {card.label}
               </p>
-              <p className="truncate text-[10px] text-slate-500">{card.hint}</p>
+              <p className="truncate text-[10px] text-[#6b6b76]">{card.hint}</p>
             </div>
           </div>
         );

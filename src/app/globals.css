@@ -1,13 +1,29 @@
+@import "tailwindcss";
+
 /* Explicit sources: auto-detection would crawl node_modules on some machines
    and blow up memory. Everything we style lives in src/. */
-@import "tailwindcss" source(none);
 @source "../../src/**/*.{ts,tsx,js,jsx,mdx}";
 
+@theme inline {
+  --font-sans: var(--font-roboto), Roboto, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+}
+
+/* Squared look: every radius scale is 2–6px ("square, a little bit rounded"). */
 @theme {
-  --color-ink: #05070f;
-  --color-ink-soft: #0b1020;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+  --color-ink: #0d0d0f;
+  --color-surface: #17171a;
+  --color-surface-2: #1d1d21;
+  --color-line: #2a2a30;
+  --color-muted: #9898a2;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 5px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
 }
 
 :root {
@@ -19,56 +35,46 @@ body {
   min-height: 100%;
 }
 
+/* Flat, dark, no gradients anywhere. */
 body {
-  background-color: #05070f;
-  background-image:
-    radial-gradient(900px 600px at 12% -8%, rgba(139, 92, 246, 0.28), transparent 60%),
-    radial-gradient(800px 500px at 92% 0%, rgba(56, 189, 248, 0.22), transparent 55%),
-    radial-gradient(700px 520px at 60% 105%, rgba(16, 185, 129, 0.16), transparent 60%);
-  background-attachment: fixed;
-  color: #e8ecff;
+  background-color: #0d0d0f;
+  color: #e8e8ea;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1;
 }
 
 ::selection {
-  background: rgba(139, 92, 246, 0.45);
+  background: #3b3b45;
   color: #fff;
 }
 
-/* --- scrollbars ------------------------------------------------------- */
+/* ---------------------------------------------------------------- scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  scrollbar-color: #35353c transparent;
 }
 *::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 999px;
+  background: #35353c;
+  border-radius: 2px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: #46464f;
 }
 
-/* --- reusable surface styles ------------------------------------------ */
-@utility glass {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(14px);
-  border-radius: 1.25rem;
-  box-shadow:
-    0 20px 45px -25px rgba(2, 6, 23, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+/* --------------------------------------------------------------- primitives */
+@utility panel {
+  background-color: #17171a;
+  border: 1px solid #2a2a30;
+  border-radius: 6px;
 }
 
-@utility gradient-text {
-  background-image: linear-gradient(100deg, #a78bfa 0%, #60a5fa 45%, #34d399 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@utility accent-text {
+  color: #a78bfa;
 }
 
 @utility focus-ring {
@@ -76,14 +82,15 @@ body {
 }
 
 .focus-ring:focus-visible {
-  box-shadow: 0 0 0 2px rgba(5, 7, 15, 1), 0 0 0 4px rgba(139, 92, 246, 0.65);
+  outline: 2px solid #7c6cf5;
+  outline-offset: 2px;
 }
 
-/* --- animations -------------------------------------------------------- */
+/* --------------------------------------------------------------- animations */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -91,40 +98,108 @@ body {
   }
 }
 
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
-  }
-  70% {
-    box-shadow: 0 0 0 7px rgba(52, 211, 153, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
 .animate-rise {
-  animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.18s ease-out both;
 }
-.animate-pulse-ring {
-  animation: pulse-ring 2s ease-out infinite;
-}
+
 .skeleton {
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  background-size: 800px 100%;
-  animation: shimmer 1.4s linear infinite;
+  background-color: #1f1f24;
+  animation: pulse-fade 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-fade {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------ rich text area */
+.rte .ProseMirror {
+  min-height: 9rem;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #e8e8ea;
+  outline: none;
+}
+
+.rte .ProseMirror p {
+  margin: 0 0 8px;
+}
+.rte .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+.rte .ProseMirror strong {
+  font-weight: 700;
+  color: #fff;
+}
+.rte .ProseMirror em {
+  font-style: italic;
+}
+.rte .ProseMirror u {
+  text-decoration: underline;
+}
+.rte .ProseMirror a {
+  color: #7cb0ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.rte .ProseMirror ul {
+  list-style: disc;
+  padding-left: 22px;
+  margin: 6px 0;
+}
+.rte .ProseMirror ol {
+  list-style: decimal;
+  padding-left: 22px;
+  margin: 6px 0;
+}
+.rte .ProseMirror li {
+  margin: 2px 0;
+}
+.rte .ProseMirror h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+.rte .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #6b6b76;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* read-only preview of what lands in the inbox */
+.email-preview {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #d7d7dc;
+  word-break: break-word;
+}
+.email-preview strong {
+  color: #fff;
+  font-weight: 700;
+}
+.email-preview a {
+  color: #7cb0ff;
+  text-decoration: underline;
+}
+.email-preview ul,
+.email-preview ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.email-preview ul {
+  list-style: disc;
+}
+.email-preview ol {
+  list-style: decimal;
+}
+.email-preview p {
+  margin: 0 0 10px;
 }

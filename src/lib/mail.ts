@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { composeEmail } from "./richtext";
 
 let transporter: Transporter | null = null;
 
@@ -10,9 +11,7 @@ export function getTransporter(): Transporter {
   const pass = process.env.SMTP_PASS;
 
   if (!host || !user || !pass) {
-    throw new Error(
-      "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in .env."
-    );
+    throw new Error("SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in .env.");
   }
 
   const port = Number(process.env.SMTP_PORT || 465);
@@ -44,22 +43,30 @@ export type MailPayload = {
   to: string;
   subject: string;
   body: string;
+  bodyHtml?: string | null;
   signature?: string;
+  signatureHtml?: string | null;
   attachment?: { filename: string; content: Buffer } | null;
 };
 
 export async function sendApplicationEmail(payload: MailPayload) {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER!;
   const fromName = process.env.SMTP_FROM_NAME;
-  const text = [payload.body.trim(), payload.signature?.trim()]
-    .filter(Boolean)
-    .join("\n\n");
+
+  // Rich text signature => multipart email (html + text fallback).
+  const parts = composeEmail(
+    payload.body,
+    payload.bodyHtml,
+    payload.signatureHtml ?? "",
+    payload.signature ?? ""
+  );
 
   const info = await getTransporter().sendMail({
     from: fromName ? `"${fromName}" <${from}>` : from,
     to: payload.to,
     subject: payload.subject,
-    text,
+    text: parts.text,
+    html: parts.html,
     attachments: payload.attachment
       ? [
           {

@@ -23,17 +23,18 @@ export default async function SettingsPage() {
   const cv = onDisk ? await readCv() : null;
 
   const initial = {
-    id: settings.id,
     cvText: settings.cvText,
-    signature: settings.signature,
+    signatureHtml: settings.signatureHtml,
     senderName: settings.senderName,
     defaultSubject: settings.defaultSubject,
-    autoSend: settings.autoSend,
-    bypassMatch: settings.bypassMatch,
-    attachCv: settings.attachCv,
     strictness: settings.strictness as "strict" | "balanced" | "lenient",
     aiModel: settings.aiModel,
     minMatchScore: settings.minMatchScore,
+    flagDraft: settings.flagDraft,
+    flagAutoSend: settings.flagAutoSend,
+    flagFetchRecruiterEmail: settings.flagFetchRecruiterEmail,
+    flagAutoGenerateEmail: settings.flagAutoGenerateEmail,
+    attachCv: settings.attachCv,
   };
 
   const envRows = [
@@ -50,45 +51,42 @@ export default async function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="animate-rise">
-        <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-white">
-          <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-teal-500/10 ring-1 ring-emerald-400/40">
-            <Settings2 className="size-5 text-emerald-200" />
+        <h1 className="flex items-center gap-2 text-[22px] font-bold tracking-tight text-white">
+          <span className="grid size-8 place-items-center rounded-[4px] border border-[#21483a] bg-[#132e23]">
+            <Settings2 className="size-4 text-[#6ee7a8]" />
           </span>
           Configuration
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Your CV, signature and automation rules live in the database. Credentials stay in{" "}
-          <code className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-violet-200">.env</code>{" "}
-          and never touch the UI.
+        <p className="mt-1.5 max-w-2xl text-[13px] text-[#9898a2]">
+          Mail flags, your single rich-text signature, the master CV and the AI model. Credentials
+          stay in <code className="rounded-[2px] bg-[#23232a] px-1 py-0.5 text-[11px] text-[#b9aaff]">.env</code>.
         </p>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="space-y-5">
-          <SettingsForm initial={initial} />
-        </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <SettingsForm initial={initial} />
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           <CvUploader initial={{ onDisk, meta: cv?.meta ?? undefined }} />
           <HealthCheck />
 
           <Card>
             <SectionHeading
-              icon={<KeyRound className="size-5" />}
+              icon={<KeyRound className="size-4" />}
               title="Credentials (from .env)"
               hint="Read-only here — edit .env and restart the dev server."
               accent="sky"
             />
-            <dl className="space-y-2 text-xs">
+            <dl className="space-y-1.5 text-[11.5px]">
               {envRows.map((row) => (
                 <div
                   key={row.label}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-[3px] border border-[#2a2a30] bg-[#131316] px-2.5 py-1.5"
                 >
-                  <dt className="font-semibold text-slate-300">{row.label}</dt>
-                  <dd className="truncate font-mono text-[11px] text-slate-400">{row.value}</dd>
+                  <dt className="font-semibold text-[#a8a8b3]">{row.label}</dt>
+                  <dd className="truncate font-mono text-[10.5px] text-[#9898a2]">{row.value}</dd>
                 </div>
               ))}
             </dl>

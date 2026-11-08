@@ -24,23 +24,39 @@ export const jobInputSchema = z.object({
     }),
   companyName: z.string().trim().max(160).optional(),
   jobTitle: z.string().trim().max(160).optional(),
-  /** Force a send even when the AI says it's a mismatch. */
-  bypassMatch: z.boolean().optional(),
 });
 
 export type JobInput = z.infer<typeof jobInputSchema>;
 
 export const settingsSchema = z.object({
   cvText: z.string().max(60_000).optional(),
-  signature: z.string().max(4_000).optional(),
+  signatureHtml: z.string().max(20_000).optional(),
   senderName: z.string().max(120).optional(),
   defaultSubject: z.string().max(300).optional(),
-  autoSend: z.boolean().optional(),
-  bypassMatch: z.boolean().optional(),
+
+  // mail sending flags
+  flagDraft: z.boolean().optional(),
+  flagAutoSend: z.boolean().optional(),
+  flagFetchRecruiterEmail: z.boolean().optional(),
+  flagAutoGenerateEmail: z.boolean().optional(),
   attachCv: z.boolean().optional(),
+
   strictness: z.enum(["strict", "balanced", "lenient"]).optional(),
   aiModel: z.string().max(120).optional(),
   minMatchScore: z.coerce.number().int().min(0).max(100).optional(),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
+
+export const draftPatchSchema = z.object({
+  emailSubject: z.string().max(300).optional(),
+  emailBodyHtml: z.string().max(100_000).optional(),
+  emailBody: z.string().max(100_000).optional(),
+  recruiterEmail: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || z.string().email().safeParse(v).success, {
+      message: "That does not look like a valid email address.",
+    }),
+});

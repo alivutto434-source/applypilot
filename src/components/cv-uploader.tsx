@@ -52,35 +52,34 @@ export function CvUploader({ initial }: { initial: { onDisk: boolean; meta?: CvM
   return (
     <Card>
       <SectionHeading
-        icon={<FileText className="size-5" />}
+        icon={<FileText className="size-4" />}
         title="Master CV (PDF)"
-        hint="Stored locally in .data/cv and attached to every email."
+        hint="Stored locally in .data/cv and attached when the “attach CV PDF” flag is on."
         accent="amber"
       />
 
       <div
-        onDragOver={(e) => {
-          e.preventDefault();
+        onDragOver={(event) => {
+          event.preventDefault();
           setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
+        onDrop={(event) => {
+          event.preventDefault();
           setDragging(false);
-          const file = e.dataTransfer.files?.[0];
+          const file = event.dataTransfer.files?.[0];
           if (file) void upload(file);
         }}
-        className={`rounded-2xl border-2 border-dashed p-6 text-center transition ${
+        className={`rounded-[4px] border border-dashed p-5 text-center transition ${
           dragging
-            ? "border-violet-400/70 bg-violet-500/10"
-            : "border-white/15 bg-white/[0.02] hover:border-white/25"
+            ? "border-[#7c6cf5] bg-[#1c1830]"
+            : "border-[#33333c] bg-[#131316] hover:border-[#46464f]"
         }`}
       >
-        <UploadCloud className="mx-auto size-8 text-violet-300" />
-        <p className="mt-2 text-sm font-semibold text-white">
+        <UploadCloud className="mx-auto size-6 text-[#b9aaff]" />
+        <p className="mt-1.5 text-[12.5px] font-semibold text-white">
           {busy ? "Working…" : "Drop your CV PDF here"}
         </p>
-        <p className="text-xs text-slate-400">or</p>
         <Button
           type="button"
           variant="outline"
@@ -96,33 +95,32 @@ export function CvUploader({ initial }: { initial: { onDisk: boolean; meta?: CvM
           type="file"
           accept="application/pdf,.pdf"
           hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
+          onChange={(event) => {
+            const file = event.target.files?.[0];
             if (file) void upload(file);
           }}
         />
-        <p className="mt-2 text-[11px] text-slate-500">PDF only · max 8 MB</p>
+        <p className="mt-1.5 text-[10.5px] text-[#6b6b76]">PDF only · max 8 MB</p>
       </div>
 
       {onDisk ? (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 py-3">
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-[4px] border border-[#21483a] bg-[#132e23] px-3 py-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-emerald-100">
+            <p className="truncate text-[12.5px] font-semibold text-[#c6f3d8]">
               {meta?.fileName || "master-cv.pdf"}
             </p>
-            <p className="text-[11px] text-emerald-200/70">
-              {meta?.size ? `${Math.round(meta.size / 1024)} KB · ` : ""}
-              ready to attach
+            <p className="text-[10.5px] text-[#6ee7a8]">
+              {meta?.size ? `${Math.round(meta.size / 1024)} KB · ` : ""}ready to attach
             </p>
           </div>
           <div className="flex gap-1">
             <a href="/api/cv" target="_blank" rel="noreferrer">
               <Button variant="ghost" size="sm" type="button">
-                <Download className="size-3.5" /> View
+                <Download className="size-3" /> View
               </Button>
             </a>
             <Button variant="ghost" size="sm" type="button" onClick={() => void remove()}>
-              <Trash2 className="size-3.5 text-rose-300/80" />
+              <Trash2 className="size-3 text-[#ff9aa8]" />
             </Button>
           </div>
         </div>

@@ -16,12 +16,12 @@ type LogRow = {
 };
 
 const LEVEL_STYLE: Record<LogRow["level"], { chip: string; text: string; label: string }> = {
-  INFO: { chip: "bg-sky-500/15 text-sky-300 ring-sky-400/30", text: "text-slate-200", label: "info" },
-  AI: { chip: "bg-violet-500/15 text-violet-300 ring-violet-400/30", text: "text-violet-100", label: "ai" },
-  EMAIL: { chip: "bg-blue-500/15 text-blue-300 ring-blue-400/30", text: "text-blue-100", label: "email" },
-  SUCCESS: { chip: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30", text: "text-emerald-100", label: "ok" },
-  WARN: { chip: "bg-amber-500/15 text-amber-300 ring-amber-400/30", text: "text-amber-100", label: "warn" },
-  ERROR: { chip: "bg-rose-500/15 text-rose-300 ring-rose-400/30", text: "text-rose-100", label: "error" },
+  INFO: { chip: "border-[#26405c] bg-[#152a3d] text-[#8ec5ff]", text: "text-[#dcdce2]", label: "info" },
+  AI: { chip: "border-[#3b3263] bg-[#241f3d] text-[#b9aaff]", text: "text-[#d8d2ff]", label: "ai" },
+  EMAIL: { chip: "border-[#1e3a5f] bg-[#101f33] text-[#7cb0ff]", text: "text-[#c8dcff]", label: "email" },
+  SUCCESS: { chip: "border-[#21483a] bg-[#132e23] text-[#6ee7a8]", text: "text-[#c6f3d8]", label: "ok" },
+  WARN: { chip: "border-[#4d3a1a] bg-[#332612] text-[#f2c15c]", text: "text-[#f3e2b8]", label: "warn" },
+  ERROR: { chip: "border-[#4d2730] bg-[#331a1f] text-[#ff9aa8]", text: "text-[#ffd4da]", label: "error" },
 };
 
 export function ActivityFeed({ className }: { className?: string }) {
@@ -30,13 +30,13 @@ export function ActivityFeed({ className }: { className?: string }) {
   const [live, setLive] = React.useState(true);
   const [seenIds, setSeenIds] = React.useState<Set<string>>(new Set());
 
-  const load = React.useCallback(async (markNew = false) => {
+  const load = React.useCallback(async (markSeen = false) => {
     try {
       const res = await fetch("/api/logs?take=60", { cache: "no-store" });
       if (!res.ok) return;
       const data = (await res.json()) as { logs: LogRow[] };
       setLogs(data.logs);
-      if (markNew) setSeenIds(new Set(data.logs.map((l) => l.id)));
+      if (markSeen) setSeenIds(new Set(data.logs.map((log) => log.id)));
     } finally {
       setLoading(false);
     }
@@ -64,46 +64,47 @@ export function ActivityFeed({ className }: { className?: string }) {
   };
 
   return (
-    <section className={cn("glass flex flex-col overflow-hidden", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-4 py-3">
+    <section className={cn("panel flex flex-col overflow-hidden", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2a2a30] bg-[#131316] px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="relative grid size-8 place-items-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-400/30">
-            <Activity className="size-4 text-emerald-300" />
-            <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-emerald-400 animate-pulse-ring" />
+          <span className="grid size-7 place-items-center rounded-[4px] border border-[#21483a] bg-[#132e23]">
+            <Activity className="size-3.5 text-[#6ee7a8]" />
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-white">Live activity</h2>
-            <p className="text-[11px] text-slate-400">
-              {live ? "Streaming every pipeline step · refreshes every 3s" : "Paused"}
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.06em] text-white">
+              Live activity
+            </h2>
+            <p className="text-[10.5px] text-[#77777f]">
+              {live ? "every pipeline step · refreshes every 3s" : "paused"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setLive((v) => !v)} title="Pause/resume polling">
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="sm" onClick={() => setLive((value) => !value)} title="Pause/resume">
             {live ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => void load()} title="Refresh now">
+          <Button variant="ghost" size="sm" onClick={() => void load()} title="Refresh">
             <RefreshCw className="size-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={clear} title="Clear feed">
+          <Button variant="ghost" size="sm" onClick={clear} title="Clear">
             <Trash2 className="size-3.5" />
           </Button>
         </div>
       </div>
 
-      <div className="max-h-[520px] min-h-[220px] flex-1 space-y-1.5 overflow-y-auto p-3 font-mono text-[12px]">
+      <div className="max-h-[520px] min-h-[220px] flex-1 space-y-1 overflow-y-auto p-2 font-mono text-[11.5px]">
         {loading ? (
-          <div className="space-y-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="skeleton h-9 rounded-lg" />
+          <div className="space-y-1.5">
+            {[0, 1, 2, 3].map((index) => (
+              <div key={index} className="skeleton h-8 rounded-[3px]" />
             ))}
           </div>
         ) : logs.length === 0 ? (
           <div className="grid h-full place-items-center px-6 py-12 text-center">
             <div>
-              <p className="text-sm font-semibold text-slate-300">Nothing has happened yet</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Paste a job description on the left and hit “Analyse &amp; apply”.
+              <p className="text-[13px] font-semibold text-[#c9c9d1]">Nothing has happened yet</p>
+              <p className="mt-1 text-[11.5px] text-[#6b6b76]">
+                Paste a job description on the left and press “Analyse &amp; save”.
               </p>
             </div>
           </div>
@@ -115,20 +116,22 @@ export function ActivityFeed({ className }: { className?: string }) {
               <div
                 key={entry.id}
                 className={cn(
-                  "animate-rise flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-2",
-                  isNew && "ring-1 ring-violet-400/40"
+                  "animate-rise flex items-start gap-2 rounded-[3px] border border-[#23232a] bg-[#131316] px-2 py-1.5",
+                  isNew && "border-[#3b3263]"
                 )}
               >
-                <span className="mt-0.5 text-[10px] text-slate-500">{timeAgo(entry.createdAt)}</span>
+                <span className="mt-0.5 shrink-0 text-[10px] text-[#6b6b76]">
+                  {timeAgo(entry.createdAt)}
+                </span>
                 <span
                   className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ring-1",
+                    "shrink-0 rounded-[2px] border px-1.5 py-[1px] text-[9px] font-bold uppercase",
                     style.chip
                   )}
                 >
                   {style.label}
                 </span>
-                <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-400">
+                <span className="shrink-0 rounded-[2px] bg-[#1f1f24] px-1.5 py-[1px] text-[10px] text-[#9898a2]">
                   {entry.stage}
                 </span>
                 <span className={cn("min-w-0 flex-1 leading-relaxed", style.text)}>{entry.message}</span>

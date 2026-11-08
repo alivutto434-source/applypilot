@@ -3,12 +3,12 @@
 --
 --   npm run db:push
 --
--- This script ONLY creates what ApplyPilot needs. It never drops or touches
--- other tables in the same database (Supabase free tier often hosts several
--- small projects), which is why we use `prisma db execute` instead of
+-- This script ONLY creates / extends what ApplyPilot needs. It never drops or
+-- touches other tables in the same database (Supabase free tier often hosts
+-- several small projects), which is why we use `prisma db execute` instead of
 -- `prisma db push` (that command tries to drop anything not in schema.prisma).
 --
--- Safe to run as many times as you like.
+-- Safe to run as many times as you like — every statement is IF NOT EXISTS.
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -23,24 +23,26 @@ END
 $$;
 
 CREATE TABLE IF NOT EXISTS "JobApplication" (
-  "id"             TEXT NOT NULL,
-  "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"      TIMESTAMP(3) NOT NULL,
-  "jobTitle"       TEXT,
-  "companyName"    TEXT,
-  "jobDescription" TEXT NOT NULL,
-  "sourceUrl"      TEXT,
-  "recruiterEmail" TEXT,
-  "matchScore"     INTEGER,
-  "isMatch"        BOOLEAN,
-  "matchReasoning" TEXT,
-  "status"         "AppStatus" NOT NULL DEFAULT 'DRAFTED',
-  "emailSubject"   TEXT,
-  "emailBody"      TEXT,
-  "emailSentAt"    TIMESTAMP(3),
-  "cvAttached"     BOOLEAN NOT NULL DEFAULT false,
-  "aiModel"        TEXT,
-  "errorMessage"   TEXT,
+  "id"              TEXT NOT NULL,
+  "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"       TIMESTAMP(3) NOT NULL,
+  "jobTitle"        TEXT,
+  "companyName"     TEXT,
+  "jobDescription"  TEXT NOT NULL,
+  "sourceUrl"       TEXT,
+  "recruiterEmail"  TEXT,
+  "recruiterSource" TEXT,
+  "matchScore"      INTEGER,
+  "isMatch"         BOOLEAN,
+  "matchReasoning"  TEXT,
+  "status"          "AppStatus" NOT NULL DEFAULT 'DRAFTED',
+  "emailSubject"    TEXT,
+  "emailBody"       TEXT,
+  "emailBodyHtml"   TEXT,
+  "emailSentAt"     TIMESTAMP(3),
+  "cvAttached"      BOOLEAN NOT NULL DEFAULT false,
+  "aiModel"         TEXT,
+  "errorMessage"    TEXT,
   CONSTRAINT "JobApplication_pkey" PRIMARY KEY ("id")
 );
 
@@ -75,18 +77,37 @@ END
 $$;
 
 CREATE TABLE IF NOT EXISTS "Settings" (
-  "id"             TEXT NOT NULL DEFAULT 'singleton',
-  "cvText"         TEXT NOT NULL DEFAULT '',
-  "cvFileName"     TEXT,
-  "signature"      TEXT NOT NULL DEFAULT '',
-  "senderName"     TEXT NOT NULL DEFAULT '',
-  "defaultSubject" TEXT NOT NULL DEFAULT 'Application for {{jobTitle}} at {{companyName}}',
-  "autoSend"       BOOLEAN NOT NULL DEFAULT false,
-  "bypassMatch"    BOOLEAN NOT NULL DEFAULT false,
-  "attachCv"       BOOLEAN NOT NULL DEFAULT true,
-  "strictness"     TEXT NOT NULL DEFAULT 'balanced',
-  "aiModel"        TEXT NOT NULL DEFAULT 'openai/gpt-4o-mini',
-  "minMatchScore"  INTEGER NOT NULL DEFAULT 60,
-  "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "id"                      TEXT NOT NULL DEFAULT 'singleton',
+  "cvText"                  TEXT NOT NULL DEFAULT '',
+  "cvFileName"              TEXT,
+  "signature"               TEXT NOT NULL DEFAULT '',
+  "signatureHtml"           TEXT NOT NULL DEFAULT '',
+  "senderName"              TEXT NOT NULL DEFAULT '',
+  "defaultSubject"          TEXT NOT NULL DEFAULT 'Application for {{jobTitle}} at {{companyName}}',
+  "flagDraft"               BOOLEAN NOT NULL DEFAULT true,
+  "flagAutoSend"            BOOLEAN NOT NULL DEFAULT false,
+  "flagFetchRecruiterEmail" BOOLEAN NOT NULL DEFAULT false,
+  "flagAutoGenerateEmail"   BOOLEAN NOT NULL DEFAULT true,
+  "attachCv"                BOOLEAN NOT NULL DEFAULT true,
+  "strictness"              TEXT NOT NULL DEFAULT 'balanced',
+  "aiModel"                 TEXT NOT NULL DEFAULT 'openai/gpt-4o-mini',
+  "minMatchScore"           INTEGER NOT NULL DEFAULT 60,
+  "updatedAt"               TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "Settings_pkey" PRIMARY KEY ("id")
 );
+
+-- ---------------------------------------------------------------------------
+-- Migrations for databases created by an older version of ApplyPilot.
+-- ---------------------------------------------------------------------------
+ALTER TABLE "JobApplication" ADD COLUMN IF NOT EXISTS "emailBodyHtml"   TEXT;
+ALTER TABLE "JobApplication" ADD COLUMN IF NOT EXISTS "recruiterSource" TEXT;
+
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "signatureHtml"           TEXT    NOT NULL DEFAULT '';
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "flagDraft"               BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "flagAutoSend"            BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "flagFetchRecruiterEmail" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "flagAutoGenerateEmail"   BOOLEAN NOT NULL DEFAULT true;
+
+-- Legacy columns kept for backwards compatibility (unused by the app now).
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "autoSend"    BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "bypassMatch" BOOLEAN NOT NULL DEFAULT false;
